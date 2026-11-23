@@ -1,0 +1,19 @@
+{
+  "name": "video-product-searcher",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "scripts": {
+    "web": "pnpm --filter @vps/web dev",
+    "build": "pnpm --filter @vps/web build",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ],
+    "overrides": {
+      "react": "19.3.0",
+      "react-dom": "19.3.0"
+    }
+  }
+}
