@@ -69,4 +69,15 @@ class MediaUtilsTest {
         assertEquals(50, crop.height)
         assertEquals(jpeg, FrameTools.crop(jpeg, listOf(1, 2, 3)))
     }
+
+    @Test
+    fun `filtro do yt-dlp usa sintaxe aceita por ele`() {
+        // regressão: "(!duration | duration <= N)" dava "Invalid filter part" e nenhum link social baixava
+        assertEquals("!is_live & duration <=? 900", VideoDownloader.matchFilter(900))
+    }
+
+    @Test
+    fun `bloqueio de robo do YouTube tem mensagem propria`() {
+        assertTrue(VideoDownloader.explain("ERROR: [youtube] x: Sign in to confirm you're not a bot").contains("YouTube"))
+    }
 }

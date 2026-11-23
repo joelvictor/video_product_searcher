@@ -66,7 +66,7 @@ class VideoDownloader {
             ytdlp, "--ignore-config", "--no-playlist", "--no-cache-dir", "--no-progress", "--no-warnings",
             "--restrict-filenames", "--no-mtime", "--socket-timeout", "20", "--retries", "2",
             "--max-filesize", maxBytes.toString(),
-            "--match-filter", "!is_live & (!duration | duration <= $maxDuration)",
+            "--match-filter", matchFilter(maxDuration),
             "-f", "bv*[height<=720]+ba/b[height<=720]/bv*+ba/b",
             "--merge-output-format", "mp4",
             "--write-info-json",
@@ -197,6 +197,9 @@ class VideoDownloader {
     companion object {
         private val PASS_ENV = setOf("PATH", "LANG", "LC_ALL", "TZ", "SSL_CERT_FILE", "REQUESTS_CA_BUNDLE", "NODE_EXTRA_CA_CERTS")
 
+        /** Sem ao vivo e até N segundos; `<=?` deixa passar quando o site não informa a duração. O yt-dlp não aceita parênteses. */
+        fun matchFilter(maxDuration: Int) = "!is_live & duration <=? $maxDuration"
+
         /** Só http(s) público; recusa hosts internos (localhost, rede privada, metadados de nuvem). */
         fun validate(raw: String): URI {
             val uri = runCatching { URI(raw.trim()) }.getOrElse { throw DownloadException("URL inválida.") }
@@ -217,6 +220,7 @@ class VideoDownloader {
             return when {
                 "does not pass filter" in o || "skipping" in o && "duration" in o -> "O vídeo é longo demais ou é uma transmissão ao vivo."
                 "max-filesize" in o || "larger than max-filesize" in o || "file is larger" in o -> "O vídeo passa do limite de tamanho."
+                "sign in to confirm" in o || "not a bot" in o -> "O YouTube bloqueou o download automático deste servidor (pede confirmação de que não é robô). Baixe o vídeo e envie pelo upload."
                 "login" in o || "private" in o || "cookies" in o || "rate-limit" in o -> "Esse post é privado ou a rede pediu login. Baixe o vídeo e envie pelo upload."
                 "unsupported url" in o -> "Esse link não é de um vídeo suportado."
                 "not available" in o || "404" in o -> "O vídeo não está disponível (removido ou restrito)."
