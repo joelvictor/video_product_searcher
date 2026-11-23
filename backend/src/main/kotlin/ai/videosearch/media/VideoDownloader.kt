@@ -12,8 +12,16 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption
+import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
+import java.nio.file.StandardOpenOption
 import java.time.Duration
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletionStage
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.Flow
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 class DownloadException(message: String) : RuntimeException(message)
 
@@ -81,49 +89,108 @@ class VideoDownloader {
         return DownloadedVideo(file, info?.path("title")?.asText(null), info?.path("description")?.asText(null))
     }
 
-    private fun direct(start: URI): DownloadedVideo {
+    /**
+     * Link direto: o corpo é gravado por um subscriber assíncrono com limite de bytes, e a troca inteira
+     * (redirects + corpo) tem o mesmo prazo do yt-dlp. Um servidor que manda os cabeçalhos e trava o corpo
+     * não segura o worker: no prazo a requisição é cancelada.
+     */
+    internal fun direct(start: URI): DownloadedVideo {
+        val deadline = System.nanoTime() + timeout.toNanos()
         var uri = start
         repeat(6) {
-            val res = http.send(
-                HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(60)).header("User-Agent", "Mozilla/5.0").GET().build(),
-                HttpResponse.BodyHandlers.ofInputStream(),
-            )
+            val file = Files.createTempFile("vps-direct", ".mp4")
+            val res = try {
+                fetch(uri, file, deadline)
+            } catch (e: Exception) {
+                Files.deleteIfExists(file)
+                throw e
+            }
             val location = res.headers().firstValue("location").orElse(null)
             if (res.statusCode() in 300..399 && location != null) {
-                res.body().close()
+                Files.deleteIfExists(file)
                 uri = validate(uri.resolve(location).toString())
                 return@repeat
             }
-            if (res.statusCode() !in 200..299) { res.body().close(); throw DownloadException("O link respondeu ${res.statusCode()}.") }
-            val type = res.headers().firstValue("content-type").orElse("")
-            if (!type.startsWith("video/") && type != "application/octet-stream") {
-                res.body().close()
-                throw DownloadException("Esse link não é de um vídeo nem de um site suportado (${allowedDomains.joinToString(", ")}).")
-            }
-            val declared = res.headers().firstValueAsLong("content-length").orElse(-1)
-            if (declared > maxBytes) { res.body().close(); throw DownloadException("O vídeo passa do limite de ${maxBytes / 1_048_576} MB.") }
-            val file = Files.createTempFile("vps-direct", ".mp4")
-            try {
-                res.body().use { input -> Files.newOutputStream(file).use { out -> copyLimited(input, out, maxBytes) } }
-            } catch (e: Exception) {
-                // download recusado ou interrompido não pode deixar o arquivo parcial ocupando disco
+            if (res.body() == null) {
                 Files.deleteIfExists(file)
-                throw e
+                throw DownloadException(rejection(res))
             }
             return DownloadedVideo(file, null, null)
         }
         throw DownloadException("Redirecionamentos demais.")
     }
 
-    private fun copyLimited(input: java.io.InputStream, out: java.io.OutputStream, limit: Long) {
-        val buf = ByteArray(64 * 1024)
-        var total = 0L
-        while (true) {
-            val n = input.read(buf)
-            if (n < 0) break
-            total += n
-            if (total > limit) throw DownloadException("O vídeo passa do limite de ${limit / 1_048_576} MB.")
-            out.write(buf, 0, n)
+    private fun fetch(uri: URI, file: Path, deadline: Long): HttpResponse<Path?> {
+        val left = deadline - System.nanoTime()
+        if (left <= 0) throw DownloadException("O download demorou demais.")
+        val request = HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(60)).header("User-Agent", "Mozilla/5.0").GET().build()
+        val handler = HttpResponse.BodyHandler<Path?> { info ->
+            if (rejection(info) == null) LimitedFileSubscriber(file, maxBytes) else HttpResponse.BodySubscribers.replacing(null)
+        }
+        val future = http.sendAsync(request, handler)
+        return try {
+            future.get(left, TimeUnit.NANOSECONDS)
+        } catch (e: TimeoutException) {
+            future.cancel(true)
+            throw DownloadException("O download demorou demais.")
+        } catch (e: ExecutionException) {
+            val cause = generateSequence(e.cause) { it.cause }.firstOrNull { it is DownloadException }
+            throw cause as? DownloadException ?: DownloadException("Não foi possível baixar o vídeo desse link.")
+        }
+    }
+
+    /** Motivo para não gravar o corpo da resposta, ou null quando é um vídeo aceitável. */
+    private fun rejection(info: HttpResponse.ResponseInfo): String? = rejection(info.statusCode(), info.headers())
+
+    private fun rejection(res: HttpResponse<*>): String = rejection(res.statusCode(), res.headers()) ?: "Não foi possível baixar o vídeo desse link."
+
+    private fun rejection(status: Int, headers: java.net.http.HttpHeaders): String? {
+        if (status in 300..399 && headers.firstValue("location").isPresent) return "redirect"
+        if (status !in 200..299) return "O link respondeu $status."
+        val type = headers.firstValue("content-type").orElse("")
+        if (!type.startsWith("video/") && type != "application/octet-stream") {
+            return "Esse link não é de um vídeo nem de um site suportado (${allowedDomains.joinToString(", ")})."
+        }
+        if (headers.firstValueAsLong("content-length").orElse(-1) > maxBytes) return "O vídeo passa do limite de ${maxBytes / 1_048_576} MB."
+        return null
+    }
+
+    /** Grava o corpo em arquivo e cancela a resposta assim que passa do limite. */
+    private class LimitedFileSubscriber(private val file: Path, private val limit: Long) : HttpResponse.BodySubscriber<Path?> {
+        private val result = CompletableFuture<Path?>()
+        private val channel = FileChannel.open(file, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)
+        private lateinit var subscription: Flow.Subscription
+        private var total = 0L
+
+        override fun getBody(): CompletionStage<Path?> = result
+
+        override fun onSubscribe(s: Flow.Subscription) {
+            subscription = s
+            s.request(1)
+        }
+
+        override fun onNext(item: List<ByteBuffer>) {
+            try {
+                for (b in item) {
+                    total += b.remaining()
+                    if (total > limit) throw DownloadException("O vídeo passa do limite de ${limit / 1_048_576} MB.")
+                    while (b.hasRemaining()) channel.write(b)
+                }
+                subscription.request(1)
+            } catch (e: Exception) {
+                subscription.cancel()
+                onError(e)
+            }
+        }
+
+        override fun onError(t: Throwable) {
+            runCatching { channel.close() }
+            result.completeExceptionally(t)
+        }
+
+        override fun onComplete() {
+            runCatching { channel.close() }
+            result.complete(file)
         }
     }
 

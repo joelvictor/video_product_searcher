@@ -27,10 +27,16 @@ class MediaCleanup {
     fun run() {
         val before = OffsetDateTime.now().minus(retention)
         val expired = QuarkusTransaction.requiringNew().call { Search.withExpiredMedia(before).map { it.id to it.videoKey } }
+        var deleted = 0
         expired.forEach { (id, key) ->
-            runCatching { key?.let(storage::delete) }.onFailure { log.warnf("não apagou o vídeo da busca %s: %s", id, it.message) }
-            QuarkusTransaction.requiringNew().run { Search.findById(id)?.mediaDeleted = true }
+            // só marca como apagado depois que o arquivo saiu; se falhar, a próxima rodada tenta de novo
+            runCatching { key?.let(storage::delete) }
+                .onSuccess {
+                    QuarkusTransaction.requiringNew().run { Search.findById(id)?.mediaDeleted = true }
+                    deleted++
+                }
+                .onFailure { log.warnf("não apagou o vídeo da busca %s: %s", id, it.message) }
         }
-        if (expired.isNotEmpty()) log.infof("vídeos apagados por retenção: %d", expired.size)
+        if (deleted > 0) log.infof("vídeos apagados por retenção: %d", deleted)
     }
 }
