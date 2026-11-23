@@ -2,6 +2,8 @@ FROM eclipse-temurin:21-jdk AS build
 WORKDIR /src
 COPY gradlew settings.gradle.kts build.gradle.kts gradle.properties ./
 COPY gradle gradle
+# checkout no Windows pode trazer CRLF, e aí o shebang do gradlew quebra ("not found")
+RUN sed -i 's/\r$//' gradlew && chmod +x gradlew
 RUN ./gradlew --no-daemon dependencies > /dev/null 2>&1 || true
 COPY src src
 RUN ./gradlew --no-daemon quarkusBuild -x test
