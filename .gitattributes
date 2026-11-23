@@ -1,0 +1,7 @@
+# Scripts rodam em containers Linux: sempre fim de linha LF, mesmo com checkout no Windows (autocrlf)
+* text=auto
+gradlew text eol=lf
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.properties text eol=lf
+*.bat text eol=crlf
