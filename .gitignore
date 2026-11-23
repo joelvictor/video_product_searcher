@@ -1,0 +1,12 @@
+node_modules/
+dist/
+backend/build/
+backend/.gradle/
+backend/data/
+.idea/
+*.iml
+.env
+.env.local
+.DS_Store
+*.tsbuildinfo
+backend/.kotlin/
