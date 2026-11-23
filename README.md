@@ -100,6 +100,15 @@ Testes: `cd backend && ./gradlew test` (usa o Postgres local, `DB_URL`/`DB_USER`
 | `VPS_MEDIA_RETENTION` | `24h` | Tempo que o vídeo original fica guardado para o modo manual |
 | `VPS_WHISPER_MODEL` | `/models/ggml-base.bin` na imagem | Modelo do whisper.cpp; vazio desliga a transcrição local |
 
+## Provedor e chaves pelo painel
+
+Em **Configurações** dá para escolher o provedor de IA (Gemini ou DeepSeek/compatível) e de busca (SerpAPI, Brave ou
+DeepSeek) e informar as chaves, sem editar o `.env`. O que for salvo ali vale no lugar das variáveis `VPS_*`; remover
+volta ao valor do ambiente, e a troca vale já na próxima busca. As chaves ficam cifradas (AES-256-GCM, com chave derivada
+da chave de assinatura) no banco e nunca voltam para a tela: ela mostra só os 4 últimos caracteres. Se a chave de
+assinatura mudar (por exemplo, o volume de mídia foi apagado), as chaves salvas no painel não podem mais ser lidas e é
+preciso informá-las de novo.
+
 ## Segurança do download
 
 - yt-dlp roda como processo separado, sem shell, com `--ignore-config`, sem cookies nem login, em diretório temporário

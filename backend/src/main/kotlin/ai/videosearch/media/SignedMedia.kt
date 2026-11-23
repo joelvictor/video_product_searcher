@@ -35,6 +35,10 @@ class SignedMediaUrls {
         configuredKey.orElse("").trim().takeIf { it.isNotEmpty() }?.toByteArray() ?: generatedKey()
     }
 
+    /** Chave derivada para outro uso (cifrar chaves de API), sem expor a chave de assinatura. */
+    fun derivedKey(label: String): ByteArray =
+        Mac.getInstance("HmacSHA256").apply { init(SecretKeySpec(key, "HmacSHA256")) }.doFinal(label.toByteArray())
+
     private fun generatedKey(): ByteArray {
         val name = ".signing-key"
         if (storage.exists(name)) return storage.get(name).also { require(it.isNotEmpty()) { "$name vazio" } }

@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.enterprise.inject.Typed
 import jakarta.inject.Inject
+import ai.videosearch.settings.RuntimeSettings
+import ai.videosearch.settings.Setting
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.jboss.logging.Logger
 import java.net.URI
@@ -23,12 +25,9 @@ class GeminiProductAnalyzer : ProductAnalyzer {
 
     @Inject lateinit var mapper: ObjectMapper
 
-    @ConfigProperty(name = "vps.ai.gemini-api-key")
-    lateinit var apiKeyOpt: java.util.Optional<String>
-    private val apiKey get() = apiKeyOpt.orElse("")
-
-    @ConfigProperty(name = "vps.ai.gemini-model", defaultValue = "gemini-2.5-flash")
-    lateinit var model: String
+    @Inject lateinit var settings: RuntimeSettings
+    private val apiKey get() = settings.get(Setting.AI_GEMINI_KEY)
+    private val model get() = settings.get(Setting.AI_GEMINI_MODEL)
 
     @ConfigProperty(name = "vps.ai.gemini-base-url", defaultValue = "https://generativelanguage.googleapis.com")
     lateinit var baseUrl: String
@@ -73,7 +72,7 @@ class GeminiProductAnalyzer : ProductAnalyzer {
         mapOf("inline_data" to mapOf("mime_type" to mime, "data" to Base64.getEncoder().encodeToString(bytes)))
 
     private fun call(body: Any): JsonNode {
-        check(apiKey.isNotBlank()) { "IA não configurada (VPS_AI_GEMINI_API_KEY)" }
+        check(apiKey.isNotBlank()) { "IA não configurada: informe a chave do Gemini em Configurações." }
         val req = HttpRequest.newBuilder(URI("$baseUrl/v1beta/models/$model:generateContent"))
             .header("Content-Type", "application/json")
             .header("x-goog-api-key", apiKey)

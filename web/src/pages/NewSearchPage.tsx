@@ -1,7 +1,7 @@
 import type { AppConfig, SearchMode } from "@vps/shared";
 import { FileVideo, Link2, MousePointerClick, ScanSearch, Upload } from "lucide-react";
 import { useRef, useState } from "react";
-import { useNavigate, useOutletContext } from "react-router";
+import { Link, useNavigate, useOutletContext } from "react-router";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,6 +48,13 @@ export function NewSearchPage() {
           produtos nas suas lojas e geramos os links de afiliado.
         </p>
       </section>
+
+      {(!config.aiConfigured || !config.searchConfigured) && (
+        <p role="alert" className="rounded-xl border border-saffron/40 bg-saffron/10 p-3 text-sm">
+          {!config.aiConfigured ? "Falta a chave da IA que analisa o vídeo. " : "Falta a chave da busca nas lojas. "}
+          <Link to="/configuracoes" className="font-semibold text-brand underline">Abrir Configurações</Link>
+        </p>
+      )}
 
       <Card>
         <CardHeader>

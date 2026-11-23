@@ -1,4 +1,4 @@
-import { History, Link as LinkIcon, ScanSearch, Store, type LucideIcon } from "lucide-react";
+import { History, Link as LinkIcon, ScanSearch, Settings, Store, type LucideIcon } from "lucide-react";
 import { NavLink } from "react-router";
 
 import { Logo } from "@/components/Logo";
@@ -10,7 +10,10 @@ const workspace: Item[] = [
   { label: "Histórico", to: "/buscas", icon: History },
   { label: "Gerar link", to: "/gerar-link", icon: LinkIcon },
 ];
-const settings: Item[] = [{ label: "Lojas", to: "/lojas", icon: Store }];
+const settings: Item[] = [
+  { label: "Lojas", to: "/lojas", icon: Store },
+  { label: "Configurações", to: "/configuracoes", icon: Settings },
+];
 
 function NavGroup({ label, items, onNavigate, collapsed }: { label: string; items: Item[]; onNavigate?: () => void; collapsed: boolean }) {
   return (

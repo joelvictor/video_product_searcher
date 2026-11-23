@@ -4,14 +4,14 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
-import org.eclipse.microprofile.config.inject.ConfigProperty
+import ai.videosearch.settings.RuntimeSettings
+import ai.videosearch.settings.Setting
 import org.jboss.logging.Logger
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
-import java.util.Optional
 
 /**
  * Um endpoint `/chat/completions` no formato da OpenAI: a API oficial do DeepSeek ou qualquer provedor que sirva
@@ -54,32 +54,20 @@ class DeepSeekClient {
 
     @Inject lateinit var mapper: ObjectMapper
 
-    @ConfigProperty(name = "vps.ai.deepseek-api-key")
-    lateinit var apiKey: Optional<String>
+    @Inject lateinit var settings: RuntimeSettings
 
-    @ConfigProperty(name = "vps.ai.deepseek-model", defaultValue = "deepseek-flash")
-    lateinit var model: String
+    /** Endpoint da análise de quadros. */
+    val analysis get() = ChatEndpoint(
+        settings.get(Setting.AI_DEEPSEEK_BASE_URL), settings.get(Setting.AI_DEEPSEEK_MODEL), settings.get(Setting.AI_DEEPSEEK_KEY),
+    )
 
-    @ConfigProperty(name = "vps.ai.deepseek-base-url", defaultValue = ChatEndpoint.DEEPSEEK_BASE_URL)
-    lateinit var baseUrl: String
-
-    @ConfigProperty(name = "vps.search.deepseek-api-key")
-    lateinit var searchApiKey: Optional<String>
-
-    @ConfigProperty(name = "vps.search.deepseek-model")
-    lateinit var searchModel: Optional<String>
-
-    @ConfigProperty(name = "vps.search.deepseek-base-url")
-    lateinit var searchBaseUrl: Optional<String>
-
-    /** Endpoint da análise de quadros (`VPS_AI_DEEPSEEK_*`). */
-    val analysis get() = ChatEndpoint(baseUrl, model, apiKey.orElse(""))
-
-    /** Endpoint da busca na web (`VPS_SEARCH_DEEPSEEK_*`, herdando da análise o que não for definido). */
-    val search get() = ChatEndpoint.forSearch(analysis, searchBaseUrl.orElse(null), searchModel.orElse(null), searchApiKey.orElse(null))
+    /** Endpoint da busca na web, herdando da análise o que não for definido. */
+    val search get() = ChatEndpoint.forSearch(
+        analysis, settings.get(Setting.SEARCH_DEEPSEEK_BASE_URL), settings.get(Setting.SEARCH_DEEPSEEK_MODEL), settings.get(Setting.SEARCH_DEEPSEEK_KEY),
+    )
 
     fun chat(endpoint: ChatEndpoint, body: Map<String, Any>, timeout: Duration = Duration.ofSeconds(120)): JsonNode {
-        check(endpoint.configured) { "DeepSeek não configurado (VPS_AI_DEEPSEEK_API_KEY)" }
+        check(endpoint.configured) { "IA não configurada: informe a chave do DeepSeek em Configurações." }
         val req = HttpRequest.newBuilder(endpoint.url)
             .header("Content-Type", "application/json")
             .apply { if (endpoint.apiKey.isNotBlank()) header("Authorization", "Bearer ${endpoint.apiKey}") }

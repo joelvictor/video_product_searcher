@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.enterprise.inject.Typed
 import jakarta.inject.Inject
+import ai.videosearch.settings.RuntimeSettings
+import ai.videosearch.settings.Setting
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.jboss.logging.Logger
 import java.net.URI
@@ -24,9 +26,8 @@ class SerpApiProductSearch : ProductSearch {
 
     @Inject lateinit var mapper: ObjectMapper
 
-    @ConfigProperty(name = "vps.search.serpapi-key")
-    lateinit var apiKeyOpt: java.util.Optional<String>
-    private val apiKey get() = apiKeyOpt.orElse("")
+    @Inject lateinit var settings: RuntimeSettings
+    private val apiKey get() = settings.get(Setting.SEARCH_SERPAPI_KEY)
 
     @ConfigProperty(name = "vps.search.serpapi-base-url", defaultValue = "https://serpapi.com")
     lateinit var baseUrl: String

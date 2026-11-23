@@ -1,7 +1,7 @@
 package ai.videosearch.ai
 
 import ai.videosearch.search.ProductSearch
-import ai.videosearch.search.ProductSearchProducer
+import ai.videosearch.search.ConfiguredSearch
 import ai.videosearch.search.SearchHit
 import ai.videosearch.search.VisualQuery
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -66,14 +66,14 @@ class AnalysisParsingTest {
     @Test
     fun `provedores sao escolhidos por configuracao`() {
         val g = StubAnalyzer(); val d = StubAnalyzer()
-        assertSame(g, ProductAnalyzerProducer.select("gemini", g, d))
-        assertSame(d, ProductAnalyzerProducer.select(" DeepSeek ", g, d))
-        assertThrows(IllegalArgumentException::class.java) { ProductAnalyzerProducer.select("xyz", g, d) }
+        assertSame(g, ConfiguredAnalyzer.select("gemini", g, d))
+        assertSame(d, ConfiguredAnalyzer.select(" DeepSeek ", g, d))
+        assertThrows(IllegalArgumentException::class.java) { ConfiguredAnalyzer.select("xyz", g, d) }
 
         val s = StubSearch(); val b = StubSearch(); val ds = StubSearch()
-        assertSame(s, ProductSearchProducer.select("serpapi", s, b, ds))
-        assertSame(b, ProductSearchProducer.select("Brave", s, b, ds))
-        assertSame(ds, ProductSearchProducer.select("deepseek", s, b, ds))
-        assertThrows(IllegalArgumentException::class.java) { ProductSearchProducer.select("bing", s, b, ds) }
+        assertSame(s, ConfiguredSearch.select("serpapi", s, b, ds))
+        assertSame(b, ConfiguredSearch.select("Brave", s, b, ds))
+        assertSame(ds, ConfiguredSearch.select("deepseek", s, b, ds))
+        assertThrows(IllegalArgumentException::class.java) { ConfiguredSearch.select("bing", s, b, ds) }
     }
 }

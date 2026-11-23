@@ -1,5 +1,7 @@
 package ai.videosearch.ai
 
+import ai.videosearch.settings.RuntimeSettings
+import ai.videosearch.settings.Setting
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.sun.net.httpserver.HttpServer
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -8,7 +10,6 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.net.InetSocketAddress
-import java.util.Optional
 
 class ChatEndpointTest {
     private val official = ChatEndpoint("https://api.deepseek.com", "deepseek-flash", "sk-oficial")
@@ -59,14 +60,14 @@ class ChatEndpointTest {
         server.start()
         try {
             val base = "http://127.0.0.1:${server.address.port}/api/v1"
+            val values = mapOf(
+                Setting.AI_DEEPSEEK_KEY to "sk-teste",
+                Setting.AI_DEEPSEEK_MODEL to "deepseek/deepseek-chat",
+                Setting.AI_DEEPSEEK_BASE_URL to base,
+            )
             val client = DeepSeekClient().apply {
                 mapper = ObjectMapper()
-                apiKey = Optional.of("sk-teste")
-                model = "deepseek/deepseek-chat"
-                baseUrl = base
-                searchApiKey = Optional.empty()
-                searchModel = Optional.empty()
-                searchBaseUrl = Optional.empty()
+                settings = object : RuntimeSettings() { override fun get(s: Setting) = values[s] ?: "" }
             }
             client.chat(client.analysis, mapOf("messages" to emptyList<Any>()))
             client.chat(ChatEndpoint(base, "local", ""), mapOf("messages" to emptyList<Any>()))

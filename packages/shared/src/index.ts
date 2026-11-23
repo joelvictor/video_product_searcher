@@ -129,11 +129,30 @@ export interface CreatedLink {
 export interface AppConfig {
   aiProvider: string;
   searchProvider: string;
+  /** Falta a chave do provedor escolhido: o painel avisa e leva para Configurações. */
+  aiConfigured: boolean;
+  searchConfigured: boolean;
   transcription: string;
   socialDomains: string[];
   maxDurationSeconds: number;
   maxManualFrames: number;
 }
+
+export type SettingSource = "PANEL" | "ENV" | "NONE";
+
+export interface SettingView {
+  id: string;
+  secret: boolean;
+  choices: string[] | null;
+  /** Chaves nunca voltam da API: `value` é nulo e `hint` mostra só o final. */
+  value: string | null;
+  hint: string | null;
+  configured: boolean;
+  source: SettingSource;
+}
+
+/** Texto salva no painel; `null` volta ao valor do ambiente; campo ausente fica como está. */
+export type SettingsChanges = Record<string, string | null>;
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -185,6 +204,9 @@ export function createApiClient(baseUrl: string, getPassword: () => string | nul
     createStore: (input: StoreInput) => request<Store>("/api/stores", { method: "POST", body: JSON.stringify(input) }),
     updateStore: (id: string, input: StoreInput) =>
       request<Store>(`/api/stores/${id}`, { method: "PUT", body: JSON.stringify(input) }),
+    settings: () => request<{ settings: SettingView[] }>("/api/settings").then((r) => r.settings),
+    saveSettings: (values: SettingsChanges) =>
+      request<{ settings: SettingView[] }>("/api/settings", { method: "PUT", body: JSON.stringify({ values }) }).then((r) => r.settings),
     createLink: (url: string) => request<CreatedLink>("/api/links", { method: "POST", body: JSON.stringify({ url }) }),
   };
 }
