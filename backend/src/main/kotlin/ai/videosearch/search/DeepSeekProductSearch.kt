@@ -12,6 +12,8 @@ import java.util.Base64
  * Busca pela ferramenta de servidor `deepseek_web_search` do DeepSeek (texto e imagem; a API não cobra por busca, só tokens).
  * A ferramenta não aceita filtro de domínio: a loja vai no pedido e os resultados são filtrados aqui pelo host,
  * do mesmo jeito que nos outros provedores. Só usamos as fontes que a ferramenta devolve, nunca URLs escritas pelo modelo.
+ * A ferramenta existe na API do DeepSeek; um provedor que sirva só o modelo não faz a busca e volta sem fontes.
+ * Por isso a busca tem endpoint próprio (`VPS_SEARCH_DEEPSEEK_*`), separado do da análise.
  * Referência: https://api-docs.deepseek.com/guides/web_tools
  */
 @ApplicationScoped
@@ -21,25 +23,35 @@ class DeepSeekProductSearch : ProductSearch {
 
     @Inject lateinit var client: DeepSeekClient
 
+    @Volatile private var warned = false
+
+    private fun endpoint() = client.search.also {
+        if (!warned && !it.isOfficial) {
+            warned = true
+            log.warnf("busca DeepSeek em %s: o provedor precisa oferecer a ferramenta deepseek_web_search, senão a busca volta vazia", it.url.host)
+        }
+    }
+
     override fun searchInDomain(domain: String, query: String, limit: Int): List<SearchHit> {
-        if (!client.configured) return emptyList()
+        val endpoint = endpoint()
+        if (!endpoint.configured) return emptyList()
         val prompt = "Pesquise na loja online $domain (site:$domain) a página de compra deste produto: $query. " +
             "Quero páginas de produto do Brasil nesse domínio, não artigos ou resenhas."
-        val root = client.chat(request(listOf(mapOf("type" to "text", "text" to prompt))))
+        val root = client.chat(endpoint, request(listOf(mapOf("type" to "text", "text" to prompt))))
         return parseSources(root).filter { hostMatchesDomain(hostOf(it.url), domain) }.take(limit)
     }
 
     override fun visualSearch(image: VisualQuery, limit: Int): List<SearchHit> {
-        if (!client.configured) return emptyList()
+        val endpoint = endpoint()
+        if (!endpoint.configured) return emptyList()
         val content = listOf(
             mapOf("type" to "text", "text" to "Encontre este produto à venda em lojas online do Brasil. Procure pela imagem e me diga onde comprar."),
             mapOf("type" to "image_url", "image_url" to mapOf("url" to "data:image/jpeg;base64,${Base64.getEncoder().encodeToString(image.jpeg)}")),
         )
-        return parseSources(client.chat(request(content))).take(limit)
+        return parseSources(client.chat(endpoint, request(content))).take(limit)
     }
 
     private fun request(content: List<Map<String, Any>>) = mapOf(
-        "model" to client.model,
         "thinking" to mapOf("type" to "disabled"),
         "tools" to listOf(mapOf("type" to "deepseek_web_search")),
         "messages" to listOf(mapOf("role" to "user", "content" to content)),

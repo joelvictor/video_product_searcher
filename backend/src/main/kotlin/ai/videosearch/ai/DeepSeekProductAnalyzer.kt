@@ -36,7 +36,6 @@ class DeepSeekProductAnalyzer : ProductAnalyzer {
             )
         }
         val body = mapOf(
-            "model" to client.model,
             "temperature" to 0.2,
             "response_format" to mapOf("type" to "json_object"),
             "messages" to listOf(
@@ -44,7 +43,7 @@ class DeepSeekProductAnalyzer : ProductAnalyzer {
                 mapOf("role" to "user", "content" to content),
             ),
         )
-        return parseResponse(mapper, client.chat(body))
+        return parseResponse(mapper, client.chat(client.analysis, body))
     }
 
     /** A API do DeepSeek não transcreve áudio; a transcrição usa o whisper.cpp. */

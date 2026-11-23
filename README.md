@@ -83,8 +83,11 @@ Testes: `cd backend && ./gradlew test` (usa o Postgres local, `DB_URL`/`DB_USER`
 | `PUBLIC_BASE_URL` | `http://localhost:8080` | Base dos links curtos e das URLs que o Google Lens acessa |
 | `VPS_AI_PROVIDER` | `gemini` | `gemini` ou `deepseek` |
 | `VPS_AI_GEMINI_API_KEY` | | Gemini (quadros + transcrição quando não há whisper.cpp) |
-| `VPS_AI_DEEPSEEK_API_KEY` | | DeepSeek (`deepseek-flash`): análise de quadros e, com `VPS_SEARCH_PROVIDER=deepseek`, a busca |
+| `VPS_AI_DEEPSEEK_API_KEY` | | Chave do provedor DeepSeek: análise de quadros e, com `VPS_SEARCH_PROVIDER=deepseek`, a busca |
+| `VPS_AI_DEEPSEEK_BASE_URL` | `https://api.deepseek.com` | Qualquer API compatível com a da OpenAI (parte da URL antes de `/chat/completions`): OpenRouter, Together, Fireworks, Azure, vLLM, Ollama... Sem chave, só para servidor próprio |
+| `VPS_AI_DEEPSEEK_MODEL` | `deepseek-flash` | Nome do modelo nesse provedor (ex.: `deepseek/deepseek-chat` no OpenRouter). Precisa aceitar imagens |
 | `VPS_SEARCH_PROVIDER` | `serpapi` | `serpapi`, `brave` ou `deepseek` |
+| `VPS_SEARCH_DEEPSEEK_BASE_URL` / `_MODEL` / `_API_KEY` | herda da análise | Endpoint da busca `deepseek`, que usa a ferramenta `deepseek_web_search` (a API oficial tem). A chave da análise só é reaproveitada no mesmo host |
 | `VPS_SEARCH_SERPAPI_KEY` | | Google por domínio (Rota A) e Google Lens (Rota B) |
 | `VPS_SEARCH_BRAVE_KEY` | | Brave Search (só texto; a Rota B cai na busca por texto) |
 | `VPS_SCAN_FPS` | `2` | Quadros por segundo lidos na varredura |
