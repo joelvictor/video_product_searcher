@@ -5,7 +5,7 @@ Este roteiro valida cada integração com as contas fornecidas.
 
 ## 1. Subir
 
-1. `cp .env.example .env` e preencha `VPS_ADMIN_PASSWORD`, `VPS_SIGNING_KEY` e as chaves de API.
+1. `cp .env.example .env` e preencha `VPS_ADMIN_PASSWORD` e as chaves de API.
 2. `docker compose up --build` e abra <http://localhost:8080>.
 3. Em **Lojas**, preencha a credencial de afiliado de cada loja, marque "Procurar nesta loja" e salve.
    O selo deve ficar "Ativa". Lojas sem `Domínio de busca` (ex.: Lomadee) só servem para links colados e busca por imagem.

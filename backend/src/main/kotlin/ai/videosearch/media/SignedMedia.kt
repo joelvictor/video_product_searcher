@@ -25,14 +25,30 @@ import javax.crypto.spec.SecretKeySpec
  */
 @ApplicationScoped
 class SignedMediaUrls {
+    /** Vazio = o backend gera uma chave aleatória e a guarda no volume de mídia (ver [key]). */
     @ConfigProperty(name = "vps.signing-key")
-    lateinit var signingKey: String
+    lateinit var configuredKey: java.util.Optional<String>
+
+    @Inject lateinit var storage: MediaStorage
+
+    private val key: ByteArray by lazy {
+        configuredKey.orElse("").trim().takeIf { it.isNotEmpty() }?.toByteArray() ?: generatedKey()
+    }
+
+    private fun generatedKey(): ByteArray {
+        val name = ".signing-key"
+        if (storage.exists(name)) return storage.get(name).also { require(it.isNotEmpty()) { "$name vazio" } }
+        val bytes = ByteArray(32).also { java.security.SecureRandom().nextBytes(it) }
+        val encoded = Base64.getEncoder().encodeToString(bytes).toByteArray()
+        storage.put(name, encoded)
+        return encoded
+    }
 
     @ConfigProperty(name = "vps.public-base-url")
     lateinit var baseUrl: String
 
     fun sign(payload: String): String {
-        val mac = Mac.getInstance("HmacSHA256").apply { init(SecretKeySpec(signingKey.toByteArray(), "HmacSHA256")) }
+        val mac = Mac.getInstance("HmacSHA256").apply { init(SecretKeySpec(key, "HmacSHA256")) }
         return Base64.getUrlEncoder().withoutPadding().encodeToString(mac.doFinal(payload.toByteArray()))
     }
 

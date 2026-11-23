@@ -79,7 +79,7 @@ Testes: `cd backend && ./gradlew test` (usa o Postgres local, `DB_URL`/`DB_USER`
 | Variável | Padrão | Para quê |
 | --- | --- | --- |
 | `VPS_ADMIN_PASSWORD` | vazio | Senha única do painel. Vazio deixa o painel aberto (só para desenvolvimento) |
-| `VPS_SIGNING_KEY` | chave de dev | HMAC das URLs assinadas de vídeo, quadros e recortes |
+| `VPS_SIGNING_KEY` | gerada sozinha | HMAC das URLs assinadas de vídeo, quadros e recortes. Vazio: o backend gera uma chave aleatória e a guarda no volume de mídia. Só defina com várias instâncias |
 | `PUBLIC_BASE_URL` | `http://localhost:8080` | Base dos links curtos e das URLs que o Google Lens acessa |
 | `VPS_AI_PROVIDER` | `gemini` | `gemini` ou `deepseek` |
 | `VPS_AI_GEMINI_API_KEY` | | Gemini (quadros + transcrição quando não há whisper.cpp) |
