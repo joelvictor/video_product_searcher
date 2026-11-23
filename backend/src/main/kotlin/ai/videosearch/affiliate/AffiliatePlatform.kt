@@ -56,6 +56,10 @@ class AffiliatePlatform : PanacheEntityBase {
     @Column(name = "android_intent_package")
     var androidIntentPackage: String? = null
 
+    /** Portal de afiliados da loja, onde o usuário encontra o próprio ID. */
+    @Column(name = "help_url")
+    var helpUrl: String? = null
+
     @Column(name = "created_at", insertable = false, updatable = false)
     var createdAt: OffsetDateTime? = null
 

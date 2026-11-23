@@ -1,5 +1,5 @@
 import type { CredentialField, Store, StoreInput } from "@vps/shared";
-import { ChevronDown, Plus } from "lucide-react";
+import { ChevronDown, ExternalLink, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -79,6 +79,11 @@ function StoreCard({ store, onSaved }: { store: Store; onSaved: (s: Store) => vo
           </div>
         </div>
         <CardDescription>{store.searchDomain ? `Busca em ${store.searchDomain}` : "Sem domínio de busca (só busca por imagem e links colados)"}</CardDescription>
+        {store.helpUrl && (
+          <a href={store.helpUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm font-semibold text-brand underline-offset-2 hover:underline">
+            Abrir o portal de afiliados para pegar meu ID<ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+          </a>
+        )}
       </CardHeader>
       <CardContent className="grid gap-3">
         {store.requiredCredentialFields.map((f) => (
@@ -120,6 +125,7 @@ function toInput(s?: Store): StoreInput {
     requiredCredentialFields: s?.requiredCredentialFields ?? [{ field: "affiliate_id", label: "Seu ID de afiliado", required: true }],
     extraParams: s?.extraParams ?? {},
     androidIntentPackage: s?.androidIntentPackage ?? "",
+    helpUrl: s?.helpUrl ?? "",
     isActive: s?.isActive ?? true,
   };
 }
@@ -165,6 +171,7 @@ function PlatformForm({ store, onSaved }: { store?: Store; onSaved: (s: Store) =
         <Field id="search" label="Domínio de busca" value={form.searchDomain ?? ""} onChange={set("searchDomain")} placeholder="minhaloja.com.br" />
       </div>
       <Field id="tpl" label="Template do link afiliado" value={form.affiliateUrlTemplate} onChange={set("affiliateUrlTemplate")} placeholder="https://loja.com/r?url={encoded_original_url}&id={influencer.affiliate_id}" />
+      <Field id="help" label="Link do portal de afiliados (opcional)" value={form.helpUrl ?? ""} onChange={set("helpUrl")} placeholder="https://afiliados.minhaloja.com.br" inputMode="url" />
       <Field id="pkg" label="Pacote do app Android (opcional)" value={form.androidIntentPackage ?? ""} onChange={set("androidIntentPackage")} />
       <div className="grid gap-1.5">
         <Label htmlFor="fields">Campos de credencial (JSON)</Label>

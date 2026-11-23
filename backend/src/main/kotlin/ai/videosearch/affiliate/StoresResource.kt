@@ -24,6 +24,7 @@ data class StoreView(
     val requiredCredentialFields: List<CredentialField>,
     val extraParams: Map<String, String>,
     val androidIntentPackage: String?,
+    val helpUrl: String?,
     val isActive: Boolean,
     val values: Map<String, String>,
     val enabled: Boolean,
@@ -42,6 +43,7 @@ data class PlatformInput(
     val requiredCredentialFields: List<CredentialField> = emptyList(),
     val extraParams: Map<String, String> = emptyMap(),
     val androidIntentPackage: String? = null,
+    val helpUrl: String? = null,
     val isActive: Boolean = true,
 )
 
@@ -103,6 +105,10 @@ class StoresResource {
         p.requiredCredentialFields = i.requiredCredentialFields.filter { it.field.isNotBlank() }
         p.extraParams = i.extraParams
         p.androidIntentPackage = i.androidIntentPackage?.trim()?.ifBlank { null }
+        p.helpUrl = i.helpUrl?.trim()?.ifBlank { null }?.also {
+            val uri = runCatching { java.net.URI(it) }.getOrNull()
+            if (uri?.scheme?.lowercase() !in setOf("http", "https") || uri?.host.isNullOrBlank()) throw BadRequestException("O link do portal de afiliados precisa ser http ou https.")
+        }
         p.isActive = i.isActive
     }
 
@@ -111,7 +117,7 @@ class StoresResource {
         val configured = p.requiredCredentialFields.filter { it.required }.all { !values[it.field].isNullOrBlank() }
         return StoreView(
             p.id, p.slug, p.displayName, p.domainRegex, p.searchDomain, p.affiliateUrlTemplate, p.requiredCredentialFields,
-            p.extraParams, p.androidIntentPackage, p.isActive, values, c?.isEnabled ?: false, c?.priority ?: 100, configured,
+            p.extraParams, p.androidIntentPackage, p.helpUrl, p.isActive, values, c?.isEnabled ?: false, c?.priority ?: 100, configured,
         )
     }
 }

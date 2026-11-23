@@ -95,6 +95,8 @@ export interface Store {
   requiredCredentialFields: CredentialField[];
   extraParams: Record<string, string>;
   androidIntentPackage: string | null;
+  /** Portal de afiliados da loja, onde o usuário acha o próprio ID. */
+  helpUrl: string | null;
   isActive: boolean;
   values: Record<string, string>;
   enabled: boolean;
@@ -111,6 +113,7 @@ export interface StoreInput {
   requiredCredentialFields: CredentialField[];
   extraParams: Record<string, string>;
   androidIntentPackage?: string | null;
+  helpUrl?: string | null;
   isActive: boolean;
 }
 

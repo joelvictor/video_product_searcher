@@ -29,5 +29,7 @@ class SeededStoresTest {
         assertTrue(ml.matches("https://meli.la/2abc"))
         assertFalse(ml.matches("https://www.shopee.com.br/x"))
         assertNotNull(ml.affiliateUrlTemplate)
+        assertEquals("https://affiliate.shopee.com.br/", shopee.helpUrl)
+        assertTrue(QuarkusTransaction.requiringNew().call { AffiliatePlatform.listAll().all { it.helpUrl?.startsWith("https://") == true } })
     }
 }
