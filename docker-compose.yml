@@ -1,0 +1,56 @@
+# Sobe tudo: docker compose up --build
+# Painel em http://localhost:8080 (nginx na frente do backend). Configure as chaves em .env (veja .env.example).
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: vps
+      POSTGRES_PASSWORD: vps
+      POSTGRES_DB: vps
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vps"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  backend:
+    build:
+      context: ./backend
+      args:
+        WHISPER_MODEL: ${WHISPER_MODEL:-base}
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/vps
+      DB_USER: vps
+      DB_PASSWORD: vps
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
+      VPS_WEB_ORIGIN: ${PUBLIC_BASE_URL:-http://localhost:8080}
+      VPS_ADMIN_PASSWORD: ${VPS_ADMIN_PASSWORD:?defina VPS_ADMIN_PASSWORD no .env}
+      VPS_SIGNING_KEY: ${VPS_SIGNING_KEY:-}
+      VPS_AI_PROVIDER: ${VPS_AI_PROVIDER:-gemini}
+      VPS_AI_GEMINI_API_KEY: ${VPS_AI_GEMINI_API_KEY:-}
+      VPS_AI_DEEPSEEK_API_KEY: ${VPS_AI_DEEPSEEK_API_KEY:-}
+      VPS_AI_DEEPSEEK_BASE_URL: ${VPS_AI_DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      VPS_AI_DEEPSEEK_MODEL: ${VPS_AI_DEEPSEEK_MODEL:-deepseek-flash}
+      VPS_SEARCH_PROVIDER: ${VPS_SEARCH_PROVIDER:-serpapi}
+      VPS_SEARCH_DEEPSEEK_BASE_URL: ${VPS_SEARCH_DEEPSEEK_BASE_URL:-}
+      VPS_SEARCH_DEEPSEEK_MODEL: ${VPS_SEARCH_DEEPSEEK_MODEL:-}
+      VPS_SEARCH_DEEPSEEK_API_KEY: ${VPS_SEARCH_DEEPSEEK_API_KEY:-}
+      VPS_SEARCH_SERPAPI_KEY: ${VPS_SEARCH_SERPAPI_KEY:-}
+      VPS_SEARCH_BRAVE_KEY: ${VPS_SEARCH_BRAVE_KEY:-}
+      VPS_SCAN_MAX_FRAMES: ${VPS_SCAN_MAX_FRAMES:-60}
+      VPS_MEDIA_RETENTION: ${VPS_MEDIA_RETENTION:-24h}
+    volumes: [media:/data]
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    depends_on: [backend]
+    ports: ["8080:80"]
+
+volumes:
+  pgdata:
+  media:
