@@ -37,4 +37,22 @@ class AffiliateLinkEngineTest {
         }
         assertEquals("influencer.source_id", e.macro)
     }
+
+    @Test
+    fun `shopee e mercado livre usam a URL sem query`() {
+        val shopee = AffiliateLinkEngine.build(
+            "https://shope.ee/an_redir?origin_link={encoded_clean_url}&affiliate_id={influencer.affiliate_id}",
+            "https://shopee.com.br/Bolsa-de-Palha-i.123.456?sp_atk=abc&xptdk=1#frag",
+            mapOf("affiliate_id" to "987"),
+        )
+        assertEquals("https://shope.ee/an_redir?origin_link=https%3A%2F%2Fshopee.com.br%2FBolsa-de-Palha-i.123.456&affiliate_id=987", shopee)
+
+        val ml = AffiliateLinkEngine.build(
+            "{clean_url}?matt_tool={influencer.matt_tool}&matt_word={influencer.matt_word}",
+            "https://www.mercadolivre.com.br/bolsa-palha/p/MLB123?pdp_filters=x#polycard_client=search",
+            mapOf("matt_tool" to "111", "matt_word" to "fulana"),
+        )
+        assertEquals("https://www.mercadolivre.com.br/bolsa-palha/p/MLB123?matt_tool=111&matt_word=fulana", ml)
+    }
 }
+

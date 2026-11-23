@@ -9,7 +9,7 @@ import java.nio.charset.StandardCharsets
  * substituindo macros `{nome}` por, nesta ordem:
  *  - `{influencer.<campo>}`  → credenciais de afiliado preenchidas na tela Lojas (prefixo mantido do StoryShop para reaproveitar os templates);
  *  - variáveis derivadas da URL original (`original_url`, `encoded_original_url`,
- *    `original_path`, `asin`);
+ *    `original_path`, `asin`, `clean_url` e `encoded_clean_url`, que são a URL sem query nem fragmento);
  *  - `extra_params` da plataforma (ex.: `merchant_id` da Awin).
  *
  * Não depende de banco nem de CDI para poder ser testado isoladamente.
@@ -41,6 +41,9 @@ object AffiliateLinkEngine {
             put("original_url", originalUrl)
             put("encoded_original_url", URLEncoder.encode(originalUrl, StandardCharsets.UTF_8))
             put("original_path", uri.rawPath.orEmpty())
+            val clean = "${uri.scheme}://${uri.rawAuthority}${uri.rawPath.orEmpty()}"
+            put("clean_url", clean)
+            put("encoded_clean_url", URLEncoder.encode(clean, StandardCharsets.UTF_8))
             asinRegex.find(uri.rawPath.orEmpty())?.let { put("asin", it.groupValues[1]) }
         }
     }
