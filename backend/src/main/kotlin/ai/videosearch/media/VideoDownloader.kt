@@ -103,7 +103,13 @@ class VideoDownloader {
             val declared = res.headers().firstValueAsLong("content-length").orElse(-1)
             if (declared > maxBytes) { res.body().close(); throw DownloadException("O vídeo passa do limite de ${maxBytes / 1_048_576} MB.") }
             val file = Files.createTempFile("vps-direct", ".mp4")
-            res.body().use { input -> Files.newOutputStream(file).use { out -> copyLimited(input, out, maxBytes) } }
+            try {
+                res.body().use { input -> Files.newOutputStream(file).use { out -> copyLimited(input, out, maxBytes) } }
+            } catch (e: Exception) {
+                // download recusado ou interrompido não pode deixar o arquivo parcial ocupando disco
+                Files.deleteIfExists(file)
+                throw e
+            }
             return DownloadedVideo(file, null, null)
         }
         throw DownloadException("Redirecionamentos demais.")
